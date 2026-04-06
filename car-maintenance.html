@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Car Maint">
+<meta name="theme-color" content="#0b1121">
+<title>Car Maintenance</title>
+<style>
+/* ===== CSS CUSTOM PROPERTIES (DARK/LIGHT THEME) ===== */
+:root {
+  --bg-primary: #0b1121;
+  --bg-card: rgba(15,23,42,0.6);
+  --bg-card-sub: rgba(15,23,42,0.35);
+  --bg-card-border: rgba(148,163,184,0.07);
+  --bg-input: #0f172a;
+  --bg-bar: rgba(11,17,33,0.97);
+  --bg-sheet: #1e293b;
+  --bg-empty: rgba(15,23,42,0.4);
+  --bg-empty-border: rgba(148,163,184,0.05);
+  --text-primary: #e2e8f0;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --text-faint: #475569;
+  --border-input: #334155;
+  --accent: #10b981;
+  --accent-light: #6ee7b7;
+  --accent-bg: rgba(16,185,129,0.15);
+  --accent-border: rgba(16,185,129,0.3);
+  --danger: #ef4444;
+  --danger-bg: rgba(239,68,68,0.1);
+  --danger-border: rgba(239,68,68,0.2);
+  --overlay-bg: rgba(0,0,0,0.5);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-primary: #f8fafc;
+    --bg-card: rgba(255,255,255,0.8);
+    --bg-card-sub: rgba(241,245,249,0.8);
+    --bg-card-border: rgba(148,163,184,0.15);
+    --bg-input: #ffffff;
+    --bg-bar: rgba(248,250,252,0.97);
+    --bg-sheet: #ffffff;
+    --bg-empty: rgba(241,245,249,0.8);
+    --bg-empty-border: rgba(148,163,184,0.1);
+    --text-primary: #0f172a;
+    --text-secondary: #1e293b;
+    --text-muted: #475569;
+    --text-dim: #64748b;
+    --text-faint: #94a3b8;
+    --border-input: #cbd5e1;
+    --accent: #059669;
+    --accent-light: #10b981;
+    --accent-bg: rgba(5,150,105,0.1);
+    --accent-border: rgba(5,150,105,0.3);
+    --danger: #dc2626;
+    --danger-bg: rgba(220,38,38,0.08);
+    --danger-border: rgba(220,38,38,0.2);
+    --overlay-bg: rgba(0,0,0,0.3);
+  }
+}
+
+/* ===== RESET + BODY ===== */
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, system-ui, sans-serif;
+  background: var(--bg-primary); color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh; min-height: 100dvh;
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  transition: background 0.2s;
+}
+.wrap { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+
+/* ===== TOAST ===== */
+.toast {
+  position: fixed; top: max(16px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+  padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 600;
+  z-index: 2000; max-width: 90vw; text-align: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.toast.ok { background: rgba(6,78,59,0.95); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+.toast.err { background: rgba(127,29,29,0.95); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+.toast.show { opacity: 1; }
+
+/* ===== HEADER ===== */
+.view-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 0 14px;
+}
+.view-title { font-size: 28px; font-weight: 800; color: var(--text-primary); }
+
+/* ===== VEHICLE SELECTOR ===== */
+.vehicle-selector {
+  display: flex; gap: 0; background: var(--bg-card); border: 1px solid var(--bg-card-border);
+  border-radius: 12px; padding: 4px; margin-bottom: 14px;
+}
+.vehicle-btn {
+  flex: 1; padding: 10px 12px; border: none; border-radius: 9px;
+  background: transparent; color: var(--text-dim); font-size: 14px; font-weight: 600;
+  cursor: pointer; text-align: center; font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+}
+.vehicle-btn:active { opacity: 0.7; }
+.vehicle-btn.active {
+  background: var(--accent-bg); color: var(--accent);
+  border: 1px solid var(--accent-border);
+}
+
+/* ===== CATEGORY FILTER ===== */
+.filter-row {
+  display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px; margin-bottom: 12px; scrollbar-width: none;
+}
+.filter-row::-webkit-scrollbar { display: none; }
+.filter-pill {
+  flex-shrink: 0; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+  border: 1px solid var(--bg-card-border); background: var(--bg-card-sub);
+  color: var(--text-muted); cursor: pointer; white-space: nowrap; font-family: inherit;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.filter-pill:active { opacity: 0.7; }
+.filter-pill.active { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+
+/* ===== ENTRY CARDS ===== */
+.entry-card {
+  background: var(--bg-card); border: 1px solid var(--bg-card-border);
+  border-radius: 14px; padding: 14px 16px; margin-bottom: 8px;
+  cursor: pointer; -webkit-user-select: none; user-select: none;
+  transition: transform 0.1s, background 0.1s;
+}
+.entry-card:active { background: var(--bg-card-sub); transform: scale(0.98); }
+.entry-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.entry-category {
+  font-size: 14px; font-weight: 600; color: var(--accent);
+  background: var(--accent-bg); padding: 2px 10px; border-radius: 12px;
+  border: 1px solid var(--accent-border);
+}
+.entry-date { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+.entry-mid { display: flex; align-items: center; gap: 16px; margin-top: 6px; }
+.entry-mileage { font-size: 13px; color: var(--text-dim); }
+.entry-mileage span { font-weight: 600; color: var(--text-secondary); font-family: 'Courier New', monospace; }
+.entry-cost { font-size: 13px; color: var(--text-dim); }
+.entry-cost span { font-weight: 600; color: var(--text-secondary); font-family: 'Courier New', monospace; }
+.entry-notes {
+  font-size: 13px; color: var(--text-dim); margin-top: 6px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ===== EMPTY STATE ===== */
+.empty {
+  color: var(--text-faint); font-size: 13px; text-align: center; padding: 30px 20px;
+  background: var(--bg-empty); border-radius: 12px;
+  border: 1px solid var(--bg-empty-border);
+}
+
+/* ===== FAB ===== */
+.fab {
+  position: fixed; bottom: max(24px, env(safe-area-inset-bottom, 24px));
+  right: max(24px, calc((100vw - 640px) / 2 + 16px));
+  width: 56px; height: 56px; border-radius: 50%; border: none;
+  background: var(--accent); color: #fff; font-size: 28px; font-weight: 300;
+  cursor: pointer; box-shadow: 0 4px 20px rgba(16,185,129,0.4);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; transition: transform 0.1s;
+}
+.fab:active { transform: scale(0.9); }
+
+/* ===== OVERLAY + SHEET ===== */
+.overlay { display: none; position: fixed; inset: 0; background: var(--overlay-bg); z-index: 1000; }
+.overlay.show { display: flex; align-items: flex-end; }
+.sheet {
+  width: 100%; max-width: 640px; margin: 0 auto;
+  background: var(--bg-sheet); border-radius: 16px 16px 0 0;
+  padding: 20px 16px; padding-bottom: max(20px, env(safe-area-inset-bottom));
+  max-height: 85vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+.sheet-title { font-size: 16px; font-weight: 700; text-align: center; margin-bottom: 16px; color: var(--text-primary); }
+
+.form-label {
+  font-size: 12px; color: var(--text-dim); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 6px; padding-left: 2px;
+}
+.form-input {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--border-input);
+  border-radius: 10px; font-size: 16px; outline: none;
+  background: var(--bg-input); color: var(--text-primary); min-height: 48px;
+  -webkit-appearance: none; font-family: inherit; margin-bottom: 14px;
+}
+.form-input::placeholder { color: var(--text-faint); }
+.form-input:focus { border-color: var(--accent); }
+select.form-input { color: var(--text-primary); }
+
+.form-row { display: flex; gap: 10px; }
+.form-row > div { flex: 1; }
+
+.btn-save {
+  display: block; width: 100%; padding: 14px; background: var(--accent); border: none;
+  border-radius: 10px; color: #fff; font-size: 15px; font-weight: 700;
+  cursor: pointer; font-family: inherit; margin-top: 4px;
+}
+.btn-save:active { opacity: 0.8; }
+
+.btn-delete {
+  display: block; width: 100%; margin-top: 10px; padding: 14px;
+  background: var(--danger-bg); border: 1px solid var(--danger-border);
+  border-radius: 10px; color: var(--danger); font-size: 15px; font-weight: 600;
+  cursor: pointer; text-align: center; font-family: inherit;
+}
+.btn-delete:active { opacity: 0.8; }
+
+.btn-cancel {
+  display: block; width: 100%; margin-top: 8px; padding: 14px;
+  background: transparent; border: 1px solid var(--bg-card-border);
+  border-radius: 10px; color: var(--text-muted); font-size: 15px; font-weight: 600;
+  cursor: pointer; text-align: center; font-family: inherit;
+}
+.btn-cancel:active { opacity: 0.8; }
+
+/* ===== CUSTOM CATEGORY ROW ===== */
+.custom-cat-row { display: none; margin-bottom: 14px; }
+.custom-cat-row.show { display: flex; gap: 8px; }
+.custom-cat-input {
+  flex: 1; padding: 12px 14px; border: 1px solid var(--border-input);
+  border-radius: 10px; font-size: 16px; outline: none;
+  background: var(--bg-input); color: var(--text-primary); min-height: 48px;
+  -webkit-appearance: none; font-family: inherit;
+}
+.custom-cat-input::placeholder { color: var(--text-faint); }
+.custom-cat-input:focus { border-color: var(--accent); }
+
+/* ===== LOADING ===== */
+.loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--text-dim); font-size: 14px; gap: 8px; }
+.spinner { width: 20px; height: 20px; border: 2px solid var(--bg-card-border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== ENTRY COUNT ===== */
+.entry-count { font-size: 12px; color: var(--text-dim); margin-bottom: 8px; padding-left: 2px; }
+</style>
+</head>
+<body>
+
+<div id="toast" class="toast"></div>
+
+<div class="wrap">
+  <div class="view-header">
+    <div class="view-title">Car Maintenance</div>
+  </div>
+
+  <div class="vehicle-selector">
+    <button class="vehicle-btn active" data-vehicle="odyssey">Odyssey</button>
+    <button class="vehicle-btn" data-vehicle="xc90">XC90</button>
+  </div>
+
+  <div id="filterRow" class="filter-row"></div>
+
+  <div id="entryCount" class="entry-count"></div>
+  <div id="entryList"></div>
+</div>
+
+<button class="fab" id="fabAdd">+</button>
+
+<!-- ===== ADD / EDIT SHEET ===== -->
+<div class="overlay" id="overlay">
+  <div class="sheet">
+    <div class="sheet-title" id="sheetTitle">Add Entry</div>
+
+    <div class="form-label">Date</div>
+    <input type="date" class="form-input" id="fieldDate">
+
+    <div class="form-label">Mileage</div>
+    <input type="number" class="form-input" id="fieldMileage" placeholder="Odometer reading" inputmode="numeric">
+
+    <div class="form-label">Category</div>
+    <select class="form-input" id="fieldCategory">
+      <option value="">Select category...</option>
+    </select>
+
+    <div class="custom-cat-row" id="customCatRow">
+      <input type="text" class="custom-cat-input" id="fieldCustomCat" placeholder="New category name">
+    </div>
+
+    <div class="form-row">
+      <div>
+        <div class="form-label">Cost ($)</div>
+        <input type="number" class="form-input" id="fieldCost" placeholder="0.00" inputmode="decimal" step="0.01">
+      </div>
+    </div>
+
+    <div class="form-label">Notes</div>
+    <textarea class="form-input" id="fieldNotes" placeholder="Shop, part numbers, warranty info..." rows="3" style="min-height:80px;resize:vertical;"></textarea>
+
+    <button class="btn-save" id="btnSave">Save Entry</button>
+    <button class="btn-delete" id="btnDelete" style="display:none;">Delete Entry</button>
+    <button class="btn-cancel" id="btnCancel">Cancel</button>
+  </div>
+</div>
+
+<!-- ===== APP SCRIPT ===== -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, onSnapshot }
+  from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+// ===== FIREBASE CONFIG =====
+var firebaseConfig = {
+  apiKey: "AIzaSyBTuu9vZ8No85Ju_KAgzUnFKhz2DG9WhMs",
+  authDomain: "brads-home-apps.firebaseapp.com",
+  projectId: "brads-home-apps",
+  storageBucket: "brads-home-apps.firebasestorage.app",
+  messagingSenderId: "676162099266",
+  appId: "1:676162099266:web:ae638bf239bfce054735db"
+};
+
+var app = initializeApp(firebaseConfig);
+var db = getFirestore(app);
+
+// ===== CONSTANTS =====
+var PRESET_CATEGORIES = ["Tires", "Oil", "Brakes", "Windshield", "Battery", "Filters", "Fluids", "Belts", "Alignment", "Wipers", "Other"];
+var VEHICLES = {
+  odyssey: "2024 Honda Odyssey",
+  xc90: "2022 Volvo XC90"
+};
+
+// ===== STATE =====
+var currentVehicle = "odyssey";
+var entries = [];
+var customCategories = [];
+var currentFilter = "All";
+var editingId = null;
+var entriesUnsub = null;
+var catUnsub = null;
+var isLoading = true;
+
+// ===== HELPERS =====
+function esc(s) {
+  if (!s) return "";
+  var d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+var toastTimer = null;
+function flash(msg, type) {
+  var t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast " + (type || "ok") + " show";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { t.classList.remove("show"); }, 2500);
+}
+
+function todayStr() {
+  var d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+function formatDate(s) {
+  if (!s) return "";
+  var parts = s.split("-");
+  return parseInt(parts[1]) + "/" + parseInt(parts[2]) + "/" + parts[0];
+}
+
+function formatCost(n) {
+  if (n == null || n === "") return "$0";
+  var num = parseFloat(n);
+  if (num === 0) return "$0";
+  return "$" + num.toLocaleString("en-US", { minimumFractionDigits: num % 1 ? 2 : 0, maximumFractionDigits: 2 });
+}
+
+function formatMileage(n) {
+  if (n == null) return "";
+  return parseInt(n).toLocaleString("en-US");
+}
+
+function allCategories() {
+  return PRESET_CATEGORIES.concat(customCategories.filter(function(c) { return PRESET_CATEGORIES.indexOf(c) === -1; }));
+}
+
+// ===== FIREBASE LISTENERS =====
+function subscribeEntries() {
+  if (entriesUnsub) entriesUnsub();
+  isLoading = true;
+  renderList();
+
+  var q = query(collection(db, "vehicles", currentVehicle, "entries"), orderBy("date", "desc"));
+  entriesUnsub = onSnapshot(q, function(snap) {
+    entries = [];
+    snap.forEach(function(d) {
+      entries.push(Object.assign({ id: d.id }, d.data()));
+    });
+    isLoading = false;
+    renderList();
+    renderFilters();
+  }, function(err) {
+    console.error("Entries listener error:", err);
+    isLoading = false;
+    flash("Error loading entries", "err");
+  });
+}
+
+function subscribeCategories() {
+  if (catUnsub) catUnsub();
+  catUnsub = onSnapshot(collection(db, "customCategories"), function(snap) {
+    customCategories = [];
+    snap.forEach(function(d) {
+      customCategories.push(d.data().name);
+    });
+    customCategories.sort();
+    renderFilters();
+    populateCategorySelect();
+  });
+}
+
+// ===== SEED DATA =====
+async function seedIfNeeded() {
+  var snap = await getDocs(collection(db, "vehicles", "odyssey", "entries"));
+  if (snap.empty) {
+    await addDoc(collection(db, "vehicles", "odyssey", "entries"), {
+      date: "2025-03-15", mileage: 36800, category: "Tires", cost: 0,
+      notes: "Replaced all 4 tires \u2014 Continental CrossContact LX25"
+    });
+    await addDoc(collection(db, "vehicles", "odyssey", "entries"), {
+      date: "2025-03-15", mileage: 36800, category: "Windshield", cost: 0,
+      notes: "Windshield replaced"
+    });
+  }
+}
+
+// ===== RENDER =====
+function renderList() {
+  var list = document.getElementById("entryList");
+  var countEl = document.getElementById("entryCount");
+
+  if (isLoading) {
+    list.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
+    countEl.textContent = "";
+    return;
+  }
+
+  var filtered = entries;
+  if (currentFilter !== "All") {
+    filtered = entries.filter(function(e) { return e.category === currentFilter; });
+  }
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty">No maintenance entries' + (currentFilter !== "All" ? ' for "' + esc(currentFilter) + '"' : "") + '.</div>';
+    countEl.textContent = "";
+    return;
+  }
+
+  countEl.textContent = filtered.length + " entr" + (filtered.length === 1 ? "y" : "ies");
+
+  var html = "";
+  filtered.forEach(function(e) {
+    html += '<div class="entry-card" data-id="' + e.id + '">';
+    html += '<div class="entry-top"><span class="entry-category">' + esc(e.category) + '</span>';
+    html += '<span class="entry-date">' + formatDate(e.date) + '</span></div>';
+    html += '<div class="entry-mid">';
+    html += '<span class="entry-mileage">Mileage: <span>' + formatMileage(e.mileage) + '</span></span>';
+    html += '<span class="entry-cost">Cost: <span>' + formatCost(e.cost) + '</span></span>';
+    html += '</div>';
+    if (e.notes) {
+      html += '<div class="entry-notes">' + esc(e.notes) + '</div>';
+    }
+    html += '</div>';
+  });
+  list.innerHTML = html;
+}
+
+function renderFilters() {
+  var row = document.getElementById("filterRow");
+  var cats = ["All"];
+  var usedCats = {};
+  entries.forEach(function(e) { if (e.category) usedCats[e.category] = true; });
+  allCategories().forEach(function(c) { if (usedCats[c]) cats.push(c); });
+
+  var html = "";
+  cats.forEach(function(c) {
+    html += '<button class="filter-pill' + (currentFilter === c ? " active" : "") + '" data-cat="' + esc(c) + '">' + esc(c) + '</button>';
+  });
+  row.innerHTML = html;
+}
+
+function populateCategorySelect() {
+  var sel = document.getElementById("fieldCategory");
+  var current = sel.value;
+  sel.innerHTML = '<option value="">Select category...</option>';
+  allCategories().forEach(function(c) {
+    sel.innerHTML += '<option value="' + esc(c) + '">' + esc(c) + '</option>';
+  });
+  sel.innerHTML += '<option value="__custom__">+ Add new category...</option>';
+  if (current) sel.value = current;
+}
+
+// ===== FORM / MODAL =====
+function openForm(entry) {
+  editingId = entry ? entry.id : null;
+  document.getElementById("sheetTitle").textContent = entry ? "Edit Entry" : "Add Entry";
+  document.getElementById("fieldDate").value = entry ? entry.date : todayStr();
+  document.getElementById("fieldMileage").value = entry ? entry.mileage : "";
+  document.getElementById("fieldCost").value = entry ? (entry.cost || "") : "";
+  document.getElementById("fieldNotes").value = entry ? (entry.notes || "") : "";
+  document.getElementById("btnDelete").style.display = entry ? "block" : "none";
+  document.getElementById("customCatRow").classList.remove("show");
+  document.getElementById("fieldCustomCat").value = "";
+
+  populateCategorySelect();
+  document.getElementById("fieldCategory").value = entry ? entry.category : "";
+
+  document.getElementById("overlay").classList.add("show");
+}
+
+function closeForm() {
+  document.getElementById("overlay").classList.remove("show");
+  editingId = null;
+}
+
+async function saveEntry() {
+  var date = document.getElementById("fieldDate").value;
+  var mileage = document.getElementById("fieldMileage").value;
+  var catSel = document.getElementById("fieldCategory").value;
+  var cost = document.getElementById("fieldCost").value;
+  var notes = document.getElementById("fieldNotes").value.trim();
+
+  var category = catSel;
+  if (catSel === "__custom__") {
+    category = document.getElementById("fieldCustomCat").value.trim();
+    if (!category) { flash("Enter a category name", "err"); return; }
+  }
+
+  if (!date || !mileage || !category) {
+    flash("Date, mileage, and category are required", "err");
+    return;
+  }
+
+  var data = {
+    date: date,
+    mileage: parseInt(mileage),
+    category: category,
+    cost: parseFloat(cost) || 0,
+    notes: notes
+  };
+
+  try {
+    if (editingId) {
+      await updateDoc(doc(db, "vehicles", currentVehicle, "entries", editingId), data);
+      flash("Entry updated");
+    } else {
+      await addDoc(collection(db, "vehicles", currentVehicle, "entries"), data);
+      flash("Entry added");
+    }
+
+    // Save custom category if new
+    if (catSel === "__custom__" && PRESET_CATEGORIES.indexOf(category) === -1 && customCategories.indexOf(category) === -1) {
+      await addDoc(collection(db, "customCategories"), { name: category });
+    }
+
+    closeForm();
+  } catch (err) {
+    console.error("Save error:", err);
+    flash("Error saving entry", "err");
+  }
+}
+
+async function deleteEntry() {
+  if (!editingId) return;
+  if (!confirm("Delete this entry?")) return;
+
+  try {
+    await deleteDoc(doc(db, "vehicles", currentVehicle, "entries", editingId));
+    flash("Entry deleted");
+    closeForm();
+  } catch (err) {
+    console.error("Delete error:", err);
+    flash("Error deleting entry", "err");
+  }
+}
+
+// ===== EVENT LISTENERS =====
+
+// Vehicle selector
+document.querySelectorAll(".vehicle-btn").forEach(function(btn) {
+  btn.addEventListener("click", function() {
+    var v = btn.dataset.vehicle;
+    if (v === currentVehicle) return;
+    currentVehicle = v;
+    currentFilter = "All";
+    document.querySelectorAll(".vehicle-btn").forEach(function(b) { b.classList.remove("active"); });
+    btn.classList.add("active");
+    subscribeEntries();
+  });
+});
+
+// Category filter
+document.getElementById("filterRow").addEventListener("click", function(e) {
+  var pill = e.target.closest(".filter-pill");
+  if (!pill) return;
+  currentFilter = pill.dataset.cat;
+  renderFilters();
+  renderList();
+});
+
+// FAB
+document.getElementById("fabAdd").addEventListener("click", function() { openForm(null); });
+
+// Entry card tap
+document.getElementById("entryList").addEventListener("click", function(e) {
+  var card = e.target.closest(".entry-card");
+  if (!card) return;
+  var entry = entries.find(function(en) { return en.id === card.dataset.id; });
+  if (entry) openForm(entry);
+});
+
+// Form buttons
+document.getElementById("btnSave").addEventListener("click", saveEntry);
+document.getElementById("btnDelete").addEventListener("click", deleteEntry);
+document.getElementById("btnCancel").addEventListener("click", closeForm);
+
+// Overlay backdrop tap
+document.getElementById("overlay").addEventListener("click", function(e) {
+  if (e.target === this) closeForm();
+});
+
+// Custom category toggle
+document.getElementById("fieldCategory").addEventListener("change", function() {
+  var row = document.getElementById("customCatRow");
+  if (this.value === "__custom__") {
+    row.classList.add("show");
+    document.getElementById("fieldCustomCat").focus();
+  } else {
+    row.classList.remove("show");
+  }
+});
+
+// ===== INIT =====
+seedIfNeeded();
+subscribeEntries();
+subscribeCategories();
+</script>
+</body>
+</html>
